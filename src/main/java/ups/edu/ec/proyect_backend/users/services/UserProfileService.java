@@ -116,4 +116,10 @@ public interface UserProfileService {
      * @return Lista de perfiles de desarrolladores
      */
     List<DeveloperProfileResponseDto> getAllDeveloperProfiles();
+
+    /**
+     * Obtiene todos los perfiles de usuarios independiente del rol
+     * @return Lista de todos los perfiles de usuarios
+     */
+    List<UserProfileResponseDto> getAllProfiles();
 }

@@ -280,7 +280,8 @@ public class UserProfileServiceImpl implements UserProfileService {
                 skillIds,
                 profile.getExperienceYears(),
                 userAuth != null ? userAuth.getName() : "",
-                userAuth != null ? userAuth.getEmail() : "");
+                userAuth != null ? userAuth.getEmail() : "",
+                userAuth != null && userAuth.getRol() != null ? userAuth.getRol().name() : null);
     }
 
     /**
@@ -313,5 +314,39 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .collect(Collectors.toList());
 
         return res;
+    }
+
+    /**
+     * Obtiene todos los perfiles de usuarios independiente del rol
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserProfileResponseDto> getAllProfiles() {
+        List<UserAuthEntity> allUsers = userAuthRepository.findAll().stream()
+                .filter(user -> user.getProfile() != null)
+                .collect(Collectors.toList());
+
+        return allUsers.stream()
+                .map(userAuth -> {
+                    UserProfileEntity profile = userAuth.getProfile();
+                    Set<Long> skillIds = new java.util.HashSet<>();
+                    if (profile.getSkills() != null) {
+                        skillIds = profile.getSkills().stream()
+                                .map(TechnologyEntity::getId)
+                                .collect(Collectors.toSet());
+                    }
+                    return new UserProfileResponseDto(
+                            profile.getId(),
+                            profile.getPhotoUrl(),
+                            profile.getPhoneNumber(),
+                            profile.getTitle(),
+                            profile.getBio(),
+                            skillIds,
+                            profile.getExperienceYears(),
+                            userAuth.getName(),
+                            userAuth.getEmail(),
+                            userAuth.getRol() != null ? userAuth.getRol().name() : null);
+                })
+                .collect(Collectors.toList());
     }
 }

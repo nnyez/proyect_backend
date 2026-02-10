@@ -46,6 +46,9 @@ dependencies {
 	
 	// Spring Boot Mail - Para envío de correos electrónicos
 	implementation("org.springframework.boot:spring-boot-starter-mail")
+	
+	// Spring Dotenv - Para cargar variables de entorno desde .env
+	implementation("me.paulschwarz:spring-dotenv:4.0.0")
 
 }
 

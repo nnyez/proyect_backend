@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -190,6 +191,18 @@ public class UserProfileController {
     @GetMapping("/developers")
     public ResponseEntity<List<DeveloperProfileResponseDto>> getAllDevelopers() {
         List<DeveloperProfileResponseDto> response = userProfileService.getAllDeveloperProfiles();
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/profiles/all
+     * Obtener todos los perfiles de usuarios independiente del rol
+     * Solo accesible para ADMIN
+     */
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/all")
+    public ResponseEntity<List<UserProfileResponseDto>> getAllProfiles() {
+        List<UserProfileResponseDto> response = userProfileService.getAllProfiles();
         return ResponseEntity.ok(response);
     }
 }

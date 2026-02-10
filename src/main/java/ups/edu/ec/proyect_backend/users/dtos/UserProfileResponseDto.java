@@ -13,13 +13,14 @@ public class UserProfileResponseDto {
     private Integer experienceYears;
     private String userName;
     private String userEmail;
+    private String role;
 
     // Constructores
     public UserProfileResponseDto() {
     }
 
     public UserProfileResponseDto(Long id, String photoUrl, String phoneNumber, String title, String bio,
-            Set<Long> skillIds, Integer experienceYears, String userName, String userEmail) {
+            Set<Long> skillIds, Integer experienceYears, String userName, String userEmail, String role) {
         this.id = id;
         this.photoUrl = photoUrl;
         this.phoneNumber = phoneNumber;
@@ -29,6 +30,7 @@ public class UserProfileResponseDto {
         this.experienceYears = experienceYears;
         this.userName = userName;
         this.userEmail = userEmail;
+        this.role = role;
     }
 
     // Getters y Setters
@@ -102,5 +104,13 @@ public class UserProfileResponseDto {
 
     public void setUserEmail(String userEmail) {
         this.userEmail = userEmail;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 }
