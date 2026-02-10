@@ -1,709 +1,882 @@
-# Proyect Backend API
+# DevConnect Backend API
 
-Una API RESTful moderna desarrollada con **Spring Boot 4.0.2** y **Java 21** para gestionar usuarios, perfiles, proyectos, tecnologías y solicitudes de servicio. El sistema incluye autenticación segura con **JWT (JSON Web Tokens)** y soporte para tres roles de usuario: STANDARD, PROGRAMMER y ADMIN.
-
----
-
-## 📋 Características Principales
-
-- ✅ **Autenticación segura** con JWT y encriptación de contraseñas
-- ✅ **Gestión de tres roles** (STANDARD, PROGRAMMER, ADMIN)
-- ✅ **Perfiles de usuario personalizados** (Estándar y Desarrollador)
-- ✅ **Gestión de proyectos** con múltiples tecnologías
-- ✅ **Solicitudes de servicio** entre clientes y programadores
-- ✅ **Base de datos PostgreSQL** con validación de integridad
-- ✅ **API RESTful** con documentación de endpoints
-- ✅ **Manejo robusto de errores** y validaciones
-- ✅ **Soporte para envío de emails** (SMTP)
-- ✅ **Docker y Docker Compose** para despliegue
+Sistema backend para una plataforma de conexión entre clientes y desarrolladores freelance. Permite gestionar perfiles de programadores, sus proyectos, disponibilidad horaria y solicitudes de servicio.
 
 ---
 
-## 🛠️ Tecnologías
+## Descripción Técnica
 
-- **Spring Boot**: 4.0.2
-- **Java**: 21
-- **Base de Datos**: PostgreSQL
-- **Autenticación**: JWT (JSON Web Tokens)
-- **ORM**: Hibernate/JPA
-- **Validación**: Jakarta Validation
-- **Email**: Spring Mail (SMTP)
-- **Build**: Gradle 8.x
-- **Contenedorización**: Docker & Docker Compose
+### Stack Tecnológico
+
+| Componente | Tecnología | Versión |
+|------------|------------|---------|
+| **Framework** | Spring Boot | 4.0.2 |
+| **Lenguaje** | Java | 21 |
+| **Base de Datos** | PostgreSQL | 12+ |
+| **Autenticación** | JWT (JSON Web Tokens) | 0.12.3 |
+| **ORM** | Hibernate/JPA | 7.2.1 |
+| **Seguridad** | Spring Security | 7.0.3 |
+| **Email** | Spring Mail | - |
+| **Build** | Gradle (Kotlin DSL) | 9.3 |
+| **Contenedorización** | Docker | - |
+
+### Arquitectura del Sistema
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CLIENTE (Frontend)                          │
+│                    Angular / React / Mobile App                     │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ HTTP/HTTPS (REST API)
+┌─────────────────────────────────────────────────────────────────────┐
+│                      SPRING BOOT APPLICATION                        │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
+│  │   Security   │  │     CORS     │  │ JWT Filter   │              │
+│  │    Config    │──│   Handler    │──│  Validator   │              │
+│  └──────────────┘  └──────────────┘  └──────────────┘              │
+├─────────────────────────────────────────────────────────────────────┤
+│                        CONTROLLERS (REST)                           │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐       │
+│  │    Auth    │ │  Profiles  │ │  Projects  │ │Applications│       │
+│  └────────────┘ └────────────┘ └────────────┘ └────────────┘       │
+│  ┌────────────┐ ┌────────────┐ ┌────────────┐                      │
+│  │Technologies│ │Availability│ │    Mail    │                      │
+│  └────────────┘ └────────────┘ └────────────┘                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                          SERVICES                                   │
+│         (Lógica de negocio, validaciones, transacciones)           │
+├─────────────────────────────────────────────────────────────────────┤
+│                        REPOSITORIES                                 │
+│              (Acceso a datos con Spring Data JPA)                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                          ENTITIES                                   │
+│    UserAuth │ UserProfile │ Project │ Technology │ Application     │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                         POSTGRESQL DATABASE                         │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Modelo de Datos (Diagrama ER)
+
+```
+┌──────────────────┐       ┌──────────────────┐
+│    user_auth     │       │   user_profile   │
+├──────────────────┤       ├──────────────────┤
+│ id (PK)          │       │ id (PK)          │
+│ email            │  1:1  │ photo_url        │
+│ name             │◄─────►│ phone_number     │
+│ password         │       │ title            │
+│ rol              │       │ bio              │
+│ profile_id (FK)  │       │ experience_years │
+└──────────────────┘       └──────────────────┘
+                                    │
+                           ┌────────┴────────┐
+                           │                 │
+                           ▼ 1:N             ▼ N:M
+              ┌──────────────────┐   ┌──────────────────┐
+              │     projects     │   │   user_skills    │
+              ├──────────────────┤   ├──────────────────┤
+              │ id (PK)          │   │ user_id (FK)     │
+              │ project          │   │ skill_id (FK)    │
+              │ description      │   └──────────────────┘
+              │ project_url      │           │
+              │ image_url        │           ▼
+              │ user_id (FK)     │   ┌──────────────────┐
+              └──────────────────┘   │   technologies   │
+                       │             ├──────────────────┤
+                       │ N:M         │ id (PK)          │
+                       ▼             │ technology       │
+              ┌──────────────────┐   └──────────────────┘
+              │project_technologies│
+              ├──────────────────┤
+              │ project_id (FK)  │
+              │ technology_id(FK)│
+              └──────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│                    service_applications                          │
+├──────────────────────────────────────────────────────────────────┤
+│ id (PK)           │ client_id (FK)     │ programmer_id (FK)      │
+│ client_name       │ programmer_name    │ status                  │
+│ subject           │ description        │ budget                  │
+│ scheduled_date    │ duration_minutes   │ start_time / end_time   │
+│ meeting_link      │ rejection_reason   │ created_at / updated_at │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Sistema de Roles
+
+| Rol | Descripción | Permisos |
+|-----|-------------|----------|
+| **STANDARD** | Usuario cliente | Solicitar servicios, ver perfiles públicos |
+| **PROGRAMMER** | Desarrollador freelance | Gestionar perfil, proyectos, disponibilidad, responder solicitudes |
+| **ADMIN** | Administrador | Acceso completo al sistema |
 
 ---
 
-## 📦 Requisitos Previos
+## Flujo de Funcionamiento
 
-- **Java 21** o superior
-- **PostgreSQL 12** o superior
-- **Docker** y **Docker Compose** (opcional, para despliegue)
-- **Gradle 8.x** (incluido con gradlew)
+### 1. Flujo de Registro y Autenticación
+
+```
+┌─────────┐                                    ┌─────────┐
+│ Cliente │                                    │ Backend │
+└────┬────┘                                    └────┬────┘
+     │                                              │
+     │ POST /api/auth/register                      │
+     │ {email, password, name}                      │
+     ├─────────────────────────────────────────────►│
+     │                                              │ ─┐ Validar email único
+     │                                              │  │ Encriptar password
+     │                                              │  │ Crear UserAuth + Profile
+     │                                              │  │ Generar JWT
+     │                                              │ ◄┘
+     │ {token, id, name, email, rol}               │
+     │◄─────────────────────────────────────────────┤
+     │                                              │
+     │ Guardar token en localStorage                │
+     │                                              │
+```
+
+### 2. Flujo de Solicitud de Servicio
+
+```
+┌─────────┐                    ┌─────────┐                    ┌────────────┐
+│ Cliente │                    │ Backend │                    │Programador │
+└────┬────┘                    └────┬────┘                    └─────┬──────┘
+     │                              │                               │
+     │ 1. GET /api/profiles/developers                             │
+     ├─────────────────────────────►│                               │
+     │ [lista de programadores]     │                               │
+     │◄─────────────────────────────┤                               │
+     │                              │                               │
+     │ 2. GET /api/availability/{programmerId}                      │
+     ├─────────────────────────────►│                               │
+     │ {disponibilidad horaria}     │                               │
+     │◄─────────────────────────────┤                               │
+     │                              │                               │
+     │ 3. POST /api/applications/client/{clientId}                  │
+     │ {programmerId, subject, description, scheduledDate...}       │
+     ├─────────────────────────────►│                               │
+     │                              │ ─┐ Crear solicitud            │
+     │                              │  │ Estado: PENDING            │
+     │                              │ ◄┘                            │
+     │ {applicationId, status...}   │                               │
+     │◄─────────────────────────────┤                               │
+     │                              │                               │
+     │                              │ 4. Notificación email         │
+     │                              ├──────────────────────────────►│
+     │                              │                               │
+     │                              │ 5. GET /api/applications/programmer/{id}
+     │                              │◄──────────────────────────────┤
+     │                              │ [solicitudes pendientes]      │
+     │                              ├──────────────────────────────►│
+     │                              │                               │
+     │                              │ 6. PATCH /api/applications/{id}/status
+     │                              │ {status: "ACCEPTED", meetingLink}
+     │                              │◄──────────────────────────────┤
+     │                              │ ─┐ Actualizar estado          │
+     │                              │ ◄┘                            │
+     │                              │                               │
+     │ 7. Notificación aceptación   │                               │
+     │◄─────────────────────────────┤                               │
+     │                              │                               │
+```
+
+### 3. Estados de una Solicitud
+
+```
+                    ┌─────────┐
+                    │ PENDING │ (Estado inicial)
+                    └────┬────┘
+                         │
+           ┌─────────────┼─────────────┐
+           ▼             ▼             ▼
+    ┌──────────┐  ┌──────────┐  ┌───────────┐
+    │ ACCEPTED │  │ REJECTED │  │ CANCELLED │
+    └────┬─────┘  └──────────┘  └───────────┘
+         │         (Final)        (Cliente)
+         ▼
+    ┌───────────┐
+    │ COMPLETED │
+    └───────────┘
+       (Final)
+```
 
 ---
 
-## 🚀 Instalación y Configuración
+## Documentación de Endpoints REST
 
-### 1. Clonar el repositorio
-
-```bash
-git clone <repository-url>
-cd proyect_backend
+### Base URL
+```
+Desarrollo: http://localhost:8080
+Producción: https://proyect-backend-dgcy.onrender.com
 ```
 
-### 2. Configurar variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto con las siguientes variables:
-
-```env
-# PostgreSQL Configuration
-PGHOST=localhost
-PGPORT=5432
-PGDATABASE=proyect_backend
-PGUSER=root
-PGPASSWORD=root
-PGSSLMODE=disable
-
-# JWT Configuration
-JWT_SECRET=mySecretKeyForJWTTokenGenerationAndValidationThatNeedsToBeVeryLongAndSecureForProductionUse1234567890!@#$%^&*()_+{}[]|:;<>,.?/
-
-# SMTP Configuration (Opcional)
-SMTP_SERVER_HOST=localhost
-SMTP_SERVER_PORT=587
-SMTP_SERVER_USERNAME=your-email@example.com
-SMTP_SERVER_PASSWORD=your-password
-SITE_MAIL_RECIEVER=admin@example.com
+### Autenticación
+Todos los endpoints protegidos requieren el header:
 ```
-
-### 3. Opción A: Ejecutar con Gradle (Desarrollo Local)
-
-```bash
-# Limpiar y compilar
-./gradlew clean build -x test
-
-# Ejecutar la aplicación
-./gradlew bootRun
-```
-
-La aplicación estará disponible en `http://localhost:8080`
-
-### 3. Opción B: Ejecutar con Docker Compose (Recomendado)
-
-```bash
-# Construir e iniciar los servicios
-docker-compose up --build
-
-# En otra terminal, ver logs
-docker-compose logs -f proyect_backend
+Authorization: Bearer {JWT_TOKEN}
 ```
 
 ---
 
-## 📚 Documentación de Endpoints
+### 🔓 Endpoints Públicos (Sin Autenticación)
 
-### 🔐 Autenticación (`/api/auth`)
+#### Auth - Autenticación
 
-#### 1. **Registro de Usuario Estándar**
-```http
-POST /api/auth/register
-Content-Type: application/json
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | Iniciar sesión |
+| `POST` | `/api/auth/register` | Registrar usuario estándar |
+| `POST` | `/api/auth/register-programmer` | Registrar programador |
+| `POST` | `/api/auth/register-admin` | Registrar administrador |
+| `GET` | `/api/auth/users/{id}/exists` | Verificar si usuario existe |
 
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "name": "Juan Usuario"
-}
-```
-**Respuesta (201 Created):**
+##### POST /api/auth/login
 ```json
+// Request
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "email": "usuario@email.com",
+  "password": "contraseña123"
+}
+
+// Response (200 OK)
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
   "id": 1,
-  "name": "Juan Usuario",
-  "email": "user@example.com",
+  "name": "Juan Pérez",
+  "email": "usuario@email.com",
   "rol": "STANDARD"
 }
 ```
 
-#### 2. **Registro de Programador**
-```http
-POST /api/auth/register-programmer
-Content-Type: application/json
-
+##### POST /api/auth/register
+```json
+// Request
 {
-  "email": "programmer@example.com",
-  "password": "password123",
-  "name": "Pedro Programador",
-  "speciality": "Backend Java"
+  "email": "nuevo@email.com",
+  "password": "contraseña123",
+  "name": "Nuevo Usuario"
+}
+
+// Response (201 Created)
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "id": 2,
+  "name": "Nuevo Usuario",
+  "email": "nuevo@email.com",
+  "rol": "STANDARD"
 }
 ```
-**Respuesta (201 Created):**
+
+##### POST /api/auth/register-programmer
 ```json
+// Request
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "id": 2,
-  "name": "Pedro Programador",
-  "email": "programmer@example.com",
+  "email": "dev@email.com",
+  "password": "contraseña123",
+  "name": "Dev Senior",
+  "speciality": "Backend Java"
+}
+
+// Response (201 Created)
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "id": 3,
+  "name": "Dev Senior",
+  "email": "dev@email.com",
   "rol": "PROGRAMMER"
 }
 ```
 
-#### 3. **Crear Administrador** (Requiere autenticación)
-```http
-POST /api/auth/register-admin
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
+---
 
-{
-  "email": "admin@example.com",
-  "password": "admin123",
-  "name": "Carlos Admin"
-}
-```
-**Respuesta (201 Created):**
+#### Profiles - Perfiles (GET Públicos)
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/profiles/{id}` | Obtener perfil por ID |
+| `GET` | `/api/profiles/{id}/exists` | Verificar si perfil existe |
+| `GET` | `/api/profiles/standard/{userId}` | Obtener perfil estándar |
+| `GET` | `/api/profiles/developer/{userId}` | Obtener perfil de desarrollador |
+| `GET` | `/api/profiles/developers` | Listar todos los desarrolladores |
+
+##### GET /api/profiles/developers
 ```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "id": 3,
-  "name": "Carlos Admin",
-  "email": "admin@example.com",
-  "rol": "ADMIN"
-}
-```
-
-#### 4. **Login**
-```http
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-**Respuesta (200 OK):**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "id": 1,
-  "name": "Juan Usuario",
-  "email": "user@example.com",
-  "rol": "STANDARD"
-}
-```
-
-#### 5. **Verificar si Usuario Existe**
-```http
-GET /api/auth/users/{id}/exists
-Authorization: Bearer {JWT_TOKEN}
-```
-**Respuesta (200 OK):**
-```json
-{
-  "exists": true
-}
+// Response (200 OK)
+[
+  {
+    "id": 3,
+    "name": "Dev Senior",
+    "email": "dev@email.com",
+    "photoUrl": "https://example.com/photo.jpg",
+    "title": "Senior Backend Developer",
+    "bio": "5 años de experiencia en Java y Spring",
+    "skills": ["Java", "Spring Boot", "PostgreSQL"],
+    "experienceYears": 5
+  }
+]
 ```
 
 ---
 
-### 👤 Perfiles de Usuario (`/api/profiles`)
+#### Projects - Proyectos (GET Públicos)
 
-#### Obtener Perfil General
-```http
-GET /api/profiles/{userId}
-Authorization: Bearer {JWT_TOKEN}
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/projects` | Listar todos los proyectos |
+| `GET` | `/api/projects/{id}` | Obtener proyecto por ID |
+| `GET` | `/api/projects/user/{userId}` | Proyectos de un usuario |
+
+##### GET /api/projects
+```json
+// Response (200 OK)
+[
+  {
+    "id": 1,
+    "project": "Sistema E-commerce",
+    "description": "Plataforma de comercio electrónico completa",
+    "projectUrl": "https://github.com/user/ecommerce",
+    "imageUrl": "https://example.com/project.jpg",
+    "ownerId": 3,
+    "technologies": ["Java", "Spring Boot", "React"]
+  }
+]
 ```
 
-#### Verificar si Perfil Existe
-```http
-GET /api/profiles/{userId}/exists
-Authorization: Bearer {JWT_TOKEN}
-```
+---
 
-#### 📋 Perfil Estándar
+#### Technologies - Tecnologías (GET Públicos)
 
-**Crear Perfil Estándar**
-```http
-POST /api/profiles/standard?userId=1
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/technologies` | Listar todas las tecnologías |
+| `GET` | `/api/technologies/{id}` | Obtener tecnología por ID |
+| `GET` | `/api/technologies/by-name/{name}` | Buscar tecnología por nombre |
 
+---
+
+### 🔐 Endpoints Protegidos (Requieren JWT)
+
+#### Profiles - Gestión de Perfiles
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/profiles/standard?userId={id}` | Crear perfil estándar |
+| `PUT` | `/api/profiles/standard/{userId}` | Actualizar perfil estándar |
+| `PATCH` | `/api/profiles/standard?userId={id}` | Actualización parcial |
+| `DELETE` | `/api/profiles/standard?userId={id}` | Eliminar perfil estándar |
+| `POST` | `/api/profiles/developer?userId={id}` | Crear perfil desarrollador |
+| `PUT` | `/api/profiles/developer?userId={id}` | Actualizar perfil desarrollador |
+| `PATCH` | `/api/profiles/developer?userId={id}` | Actualización parcial |
+| `DELETE` | `/api/profiles/developer?userId={id}` | Eliminar perfil desarrollador |
+
+##### POST /api/profiles/developer?userId=3
+```json
+// Request
 {
   "photoUrl": "https://example.com/photo.jpg",
-  "phoneNumber": "+1234567890"
+  "title": "Full Stack Developer",
+  "bio": "Apasionado por crear soluciones innovadoras",
+  "skills": [1, 2, 3],  // IDs de tecnologías
+  "experienceYears": 5
 }
-```
 
-**Obtener Perfil Estándar**
-```http
-GET /api/profiles/standard/{userId}
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Actualizar Perfil Estándar (PUT - Completo)**
-```http
-PUT /api/profiles/standard/{userId}
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
+// Response (201 Created)
 {
-  "photoUrl": "https://example.com/new-photo.jpg",
-  "phoneNumber": "+1987654321"
-}
-```
-
-**Actualizar Perfil Estándar (PATCH - Parcial)**
-```http
-PATCH /api/profiles/standard?userId=1
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "phoneNumber": "+1987654321"
-}
-```
-
-**Eliminar Perfil Estándar**
-```http
-DELETE /api/profiles/standard?userId=1
-Authorization: Bearer {JWT_TOKEN}
-```
-
-#### 💻 Perfil Desarrollador/Admin
-
-**Crear Perfil Desarrollador**
-```http
-POST /api/profiles/developer?userId=2
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "photoUrl": "https://example.com/dev-photo.jpg",
-  "skills": ["Java", "Spring Boot", "PostgreSQL"],
-  "yearsOfExperience": 5,
-  "title": "Senior Backend Developer",
-  "biography": "Experiencia en desarrollo de APIs RESTful..."
-}
-```
-
-**Obtener Perfil Desarrollador**
-```http
-GET /api/profiles/developer/{userId}
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Actualizar Perfil Desarrollador (PUT - Completo)**
-```http
-PUT /api/profiles/developer?userId=2
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "photoUrl": "https://example.com/new-dev-photo.jpg",
-  "skills": ["Java", "Spring Boot", "PostgreSQL", "Docker"],
-  "yearsOfExperience": 6,
-  "title": "Lead Backend Developer",
-  "biography": "Experiencia en desarrollo de APIs RESTful y arquitectura de microservicios..."
-}
-```
-
-**Actualizar Perfil Desarrollador (PATCH - Parcial)**
-```http
-PATCH /api/profiles/developer?userId=2
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "yearsOfExperience": 6,
-  "title": "Lead Backend Developer"
-}
-```
-
-**Obtener Todos los Desarrolladores**
-```http
-GET /api/profiles/developers
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Eliminar Perfil Desarrollador**
-```http
-DELETE /api/profiles/developer?userId=2
-Authorization: Bearer {JWT_TOKEN}
-```
-
----
-
-### 🏗️ Proyectos (`/api/projects`)
-
-**Crear Proyecto**
-```http
-POST /api/projects?userId=2
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "title": "Sistema de Gestión",
-  "description": "Plataforma completa de gestión...",
-  "startDate": "2024-01-15",
-  "endDate": "2024-06-30",
-  "technologies": [1, 2, 3]
-}
-```
-
-**Obtener Proyecto por ID**
-```http
-GET /api/projects/{projectId}
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Obtener Todos los Proyectos**
-```http
-GET /api/projects
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Obtener Proyectos de un Usuario**
-```http
-GET /api/projects/user/{userId}
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Actualizar Proyecto Completamente (PUT)**
-```http
-PUT /api/projects/{projectId}
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "title": "Sistema de Gestión Actualizado",
-  "description": "Descripción actualizada...",
-  "startDate": "2024-01-15",
-  "endDate": "2024-12-31",
-  "technologies": [1, 2, 3, 4]
-}
-```
-
-**Actualizar Proyecto Parcialmente (PATCH)**
-```http
-PATCH /api/projects/{projectId}
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "endDate": "2024-12-31",
-  "technologies": [1, 2, 3, 4]
-}
-```
-
-**Eliminar Proyecto**
-```http
-DELETE /api/projects/{projectId}
-Authorization: Bearer {JWT_TOKEN}
-```
-
----
-
-### 🔧 Tecnologías (`/api/technologies`)
-
-**Crear Tecnología**
-```http
-POST /api/technologies
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "name": "Spring Boot",
-  "description": "Framework Java para desarrollo de aplicaciones",
-  "version": "4.0.2"
-}
-```
-
-**Obtener Tecnología por ID**
-```http
-GET /api/technologies/{id}
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Obtener Todas las Tecnologías**
-```http
-GET /api/technologies
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Obtener Tecnología por Nombre**
-```http
-GET /api/technologies/by-name/{name}
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Actualizar Tecnología (PUT)**
-```http
-PUT /api/technologies/{id}
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
-{
-  "name": "Spring Boot",
-  "description": "Framework Java actualizado",
-  "version": "4.1.0"
+  "id": 3,
+  "name": "Dev Senior",
+  "email": "dev@email.com",
+  "photoUrl": "https://example.com/photo.jpg",
+  "title": "Full Stack Developer",
+  "bio": "Apasionado por crear soluciones innovadoras",
+  "skills": ["Java", "Spring Boot", "React"],
+  "experienceYears": 5
 }
 ```
 
 ---
 
-### 📝 Solicitudes de Servicio (`/api/applications`)
+#### Projects - Gestión de Proyectos
 
-**Crear Solicitud de Servicio**
-```http
-POST /api/applications/client/{clientId}
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/projects?userId={id}` | Crear proyecto |
+| `PUT` | `/api/projects/{id}` | Actualizar proyecto completo |
+| `PATCH` | `/api/projects/{id}` | Actualización parcial |
+| `DELETE` | `/api/projects/{id}` | Eliminar proyecto |
 
+##### POST /api/projects?userId=3
+```json
+// Request
 {
-  "programmerId": 2,
-  "title": "Desarrollo de API REST",
-  "description": "Necesito desarrollar una API REST para...",
-  "budget": 1000.00,
-  "dueDate": "2024-03-30"
+  "project": "API REST Microservicios",
+  "description": "Arquitectura de microservicios con Spring Cloud",
+  "projectUrl": "https://github.com/user/microservices",
+  "imageUrl": "https://example.com/project.png",
+  "technologies": [1, 2, 4]  // IDs de tecnologías
+}
+
+// Response (201 Created)
+{
+  "id": 5,
+  "project": "API REST Microservicios",
+  "description": "Arquitectura de microservicios con Spring Cloud",
+  "projectUrl": "https://github.com/user/microservices",
+  "imageUrl": "https://example.com/project.png",
+  "ownerId": 3,
+  "technologies": ["Java", "Spring Boot", "Docker"]
 }
 ```
 
-**Obtener Solicitud por ID**
-```http
-GET /api/applications/{id}
-Authorization: Bearer {JWT_TOKEN}
-```
+---
 
-**Obtener Solicitudes del Cliente**
-```http
-GET /api/applications/client/{clientId}
-Authorization: Bearer {JWT_TOKEN}
+#### Technologies - Gestión de Tecnologías
 
-# Con filtro de estado (PENDING, ACCEPTED, REJECTED, COMPLETED, CANCELLED)
-GET /api/applications/client/{clientId}?status=PENDING
-Authorization: Bearer {JWT_TOKEN}
-```
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/technologies` | Crear tecnología |
+| `PUT` | `/api/technologies/{id}` | Actualizar tecnología |
 
-**Obtener Solicitudes del Programador**
-```http
-GET /api/applications/programmer/{programmerId}
-Authorization: Bearer {JWT_TOKEN}
-
-# Con filtro de estado
-GET /api/applications/programmer/{programmerId}?status=ACCEPTED
-Authorization: Bearer {JWT_TOKEN}
-```
-
-**Actualizar Estado de la Solicitud**
-```http
-PATCH /api/applications/{id}/status
-Content-Type: application/json
-Authorization: Bearer {JWT_TOKEN}
-
+##### POST /api/technologies
+```json
+// Request
 {
-  "status": "ACCEPTED"  # PENDING, ACCEPTED, REJECTED, COMPLETED, CANCELLED
+  "technology": "Kubernetes"
+}
+
+// Response (201 Created)
+{
+  "id": 10,
+  "technology": "Kubernetes"
 }
 ```
 
-**Eliminar Solicitud**
-```http
-DELETE /api/applications/{id}
-Authorization: Bearer {JWT_TOKEN}
+---
+
+#### Availability - Disponibilidad Horaria
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/availability/{userId}` | Crear/actualizar disponibilidad |
+| `GET` | `/api/availability/{userId}` | Obtener disponibilidad |
+| `DELETE` | `/api/availability/{userId}` | Eliminar disponibilidad |
+
+##### POST /api/availability/3
+```json
+// Request
+{
+  "days": [
+    {
+      "dayOfWeek": "MONDAY",
+      "timeSlots": [
+        {"startTime": "09:00", "endTime": "12:00"},
+        {"startTime": "14:00", "endTime": "18:00"}
+      ]
+    },
+    {
+      "dayOfWeek": "TUESDAY",
+      "timeSlots": [
+        {"startTime": "10:00", "endTime": "17:00"}
+      ]
+    }
+  ]
+}
+
+// Response (201 Created)
+{
+  "userId": 3,
+  "days": [...]
+}
 ```
 
 ---
 
-## 🔐 Seguridad y Autenticación
+#### Applications - Solicitudes de Servicio
 
-### JWT (JSON Web Tokens)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/applications/client/{clientId}` | Crear solicitud |
+| `GET` | `/api/applications/{id}` | Obtener solicitud por ID |
+| `GET` | `/api/applications/client/{clientId}` | Solicitudes del cliente |
+| `GET` | `/api/applications/client/{clientId}?status=PENDING` | Filtrar por estado |
+| `GET` | `/api/applications/programmer/{programmerId}` | Solicitudes del programador |
+| `GET` | `/api/applications/programmer/{programmerId}?status=ACCEPTED` | Filtrar por estado |
+| `PATCH` | `/api/applications/{id}/status` | Cambiar estado |
+| `DELETE` | `/api/applications/{id}` | Eliminar solicitud |
 
-Todos los endpoints (excepto login y registro) requieren un JWT válido en el header `Authorization`:
+##### POST /api/applications/client/1
+```json
+// Request
+{
+  "programmerId": 3,
+  "subject": "Desarrollo de API REST",
+  "description": "Necesito desarrollar una API para mi aplicación móvil",
+  "budget": "$500-1000",
+  "scheduledDate": 1707580800000,  // Timestamp en ms
+  "durationMinutes": 60,
+  "startTime": 1707584400000,
+  "endTime": 1707588000000
+}
 
+// Response (201 Created)
+{
+  "id": 1,
+  "clientId": 1,
+  "clientName": "Juan Cliente",
+  "programmerId": 3,
+  "programmerName": "Dev Senior",
+  "status": "PENDING",
+  "subject": "Desarrollo de API REST",
+  "description": "Necesito desarrollar una API para mi aplicación móvil",
+  "budget": "$500-1000",
+  "scheduledDate": 1707580800000,
+  "durationMinutes": 60,
+  "startTime": 1707584400000,
+  "endTime": 1707588000000,
+  "createdAt": 1707500000000,
+  "updatedAt": 1707500000000,
+  "meetingLink": null,
+  "rejectionReason": null
+}
 ```
-Authorization: Bearer {JWT_TOKEN}
+
+##### PATCH /api/applications/1/status (Aceptar)
+```json
+// Request
+{
+  "status": "ACCEPTED",
+  "meetingLink": "https://meet.google.com/abc-defg-hij"
+}
+
+// Response (200 OK)
+{
+  "id": 1,
+  "status": "ACCEPTED",
+  "meetingLink": "https://meet.google.com/abc-defg-hij",
+  ...
+}
 ```
 
-### Configuración de JWT
+##### PATCH /api/applications/1/status (Rechazar)
+```json
+// Request
+{
+  "status": "REJECTED",
+  "rejectionReason": "No tengo disponibilidad en las fechas solicitadas"
+}
 
-```yaml
-jwt:
-  secret: ${JWT_SECRET}           # Clave secreta para firmar tokens
-  expiration: 86400000            # 24 horas en milisegundos
-  refresh-expiration: 604800000   # 7 días en milisegundos
-  issuer: proyect_backend-api
-  header: Authorization
-  prefix: "Bearer "
-```
-
-### Roles del Sistema
-
-| Rol | Descripción | Permisos |
-|-----|-------------|----------|
-| **STANDARD** | Usuario estándar del sistema | Crear perfil estándar, solicitar servicios |
-| **PROGRAMMER** | Desarrollador/Programador | Crear perfil desarrollador, proyectos, aceptar solicitudes |
-| **ADMIN** | Administrador del sistema | Acceso completo a todas las funcionalidades |
-
----
-
-## 📊 Estructura del Proyecto
-
-```
-src/
-├── main/
-│   ├── java/ups/edu/ec/proyect_backend/
-│   │   ├── ProyectBackendApplication.java      # Clase principal
-│   │   ├── auth/                               # Módulo de autenticación
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   ├── entities/
-│   │   │   └── dtos/
-│   │   ├── users/                              # Módulo de perfiles de usuario
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   ├── entities/
-│   │   │   └── dtos/
-│   │   ├── projects/                           # Módulo de proyectos
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   ├── entities/
-│   │   │   └── dtos/
-│   │   ├── technologies/                       # Módulo de tecnologías
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   ├── entities/
-│   │   │   └── dtos/
-│   │   ├── applications/                       # Módulo de solicitudes
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   ├── repositories/
-│   │   │   ├── entities/
-│   │   │   └── dtos/
-│   │   ├── mail/                              # Módulo de email
-│   │   │   ├── controllers/
-│   │   │   ├── services/
-│   │   │   └── dtos/
-│   │   ├── core/                              # Componentes centrales
-│   │   │   ├── exceptions/
-│   │   │   └── entities/
-│   │   └── availability/                      # Módulo de disponibilidad
-│   │       └── ...
-│   └── resources/
-│       ├── application.yaml                   # Configuración principal
-│       ├── static/                            # Archivos estáticos
-│       └── templates/                         # Plantillas
-└── test/
-    └── java/...                               # Tests unitarios
+// Response (200 OK)
+{
+  "id": 1,
+  "status": "REJECTED",
+  "rejectionReason": "No tengo disponibilidad en las fechas solicitadas",
+  ...
+}
 ```
 
 ---
 
-## 🐳 Docker y Docker Compose
+#### Mail - Notificaciones por Email
 
-### Archivo docker-compose.yml
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `POST` | `/api/mail/send` | Enviar email genérico |
+| `POST` | `/api/mail/notify/new-application` | Notificar nueva solicitud |
+| `POST` | `/api/mail/notify/application-accepted` | Notificar aceptación |
+| `POST` | `/api/mail/notify/application-rejected` | Notificar rechazo |
 
-El proyecto incluye un `docker-compose.yml` que define dos servicios:
+---
 
-1. **PostgreSQL**: Base de datos
-2. **Proyect Backend**: Aplicación Spring Boot
+## Guía de Usuario
 
-### Comandos útiles
+### Para Administradores
+
+#### 1. Configuración Inicial
+
+1. **Crear primer admin** (requiere acceso directo a BD o endpoint público inicial):
+   ```bash
+   POST /api/auth/register-admin
+   {
+     "email": "admin@sistema.com",
+     "password": "adminSecure123!",
+     "name": "Administrador Principal"
+   }
+   ```
+
+2. **Configurar tecnologías base**:
+   ```bash
+   POST /api/technologies
+   Authorization: Bearer {admin_token}
+   
+   # Crear tecnologías comunes
+   {"technology": "Java"}
+   {"technology": "Spring Boot"}
+   {"technology": "JavaScript"}
+   {"technology": "React"}
+   {"technology": "Angular"}
+   {"technology": "PostgreSQL"}
+   {"technology": "Docker"}
+   ```
+
+#### 2. Gestión del Sistema
+
+- **Monitorear salud del sistema**: `GET /actuator/health`
+- **Ver métricas**: `GET /actuator/metrics`
+
+#### 3. Gestión de Usuarios
+
+Los administradores pueden:
+- Crear otros administradores
+- Acceder a todos los perfiles
+- Gestionar tecnologías del catálogo
+
+---
+
+### Para Programadores
+
+#### 1. Registro y Configuración de Perfil
 
 ```bash
-# Iniciar los servicios
-docker-compose up --build
+# 1. Registrarse como programador
+POST /api/auth/register-programmer
+{
+  "email": "dev@email.com",
+  "password": "securePass123",
+  "name": "María Developer",
+  "speciality": "Full Stack"
+}
 
-# Ver logs en tiempo real
-docker-compose logs -f proyect_backend
+# 2. Guardar el token recibido
 
-# Detener los servicios
-docker-compose down
+# 3. Completar perfil de desarrollador
+POST /api/profiles/developer?userId={tu_id}
+Authorization: Bearer {token}
+{
+  "photoUrl": "https://tu-foto.com/avatar.jpg",
+  "title": "Senior Full Stack Developer",
+  "bio": "5 años creando aplicaciones web escalables",
+  "skills": [1, 2, 3, 4],  // IDs de tecnologías
+  "experienceYears": 5
+}
+```
 
-# Eliminar volúmenes (cuidado: borra datos)
-docker-compose down -v
+#### 2. Agregar Proyectos al Portafolio
 
-# Ver estado de los servicios
-docker-compose ps
+```bash
+POST /api/projects?userId={tu_id}
+Authorization: Bearer {token}
+{
+  "project": "E-commerce Platform",
+  "description": "Plataforma completa con carrito, pagos y gestión",
+  "projectUrl": "https://github.com/tuuser/ecommerce",
+  "imageUrl": "https://example.com/screenshot.png",
+  "technologies": [1, 2, 5]
+}
+```
+
+#### 3. Configurar Disponibilidad
+
+```bash
+POST /api/availability/{tu_id}
+Authorization: Bearer {token}
+{
+  "days": [
+    {
+      "dayOfWeek": "MONDAY",
+      "timeSlots": [
+        {"startTime": "09:00", "endTime": "12:00"},
+        {"startTime": "14:00", "endTime": "18:00"}
+      ]
+    },
+    {
+      "dayOfWeek": "WEDNESDAY",
+      "timeSlots": [
+        {"startTime": "10:00", "endTime": "16:00"}
+      ]
+    },
+    {
+      "dayOfWeek": "FRIDAY",
+      "timeSlots": [
+        {"startTime": "09:00", "endTime": "13:00"}
+      ]
+    }
+  ]
+}
+```
+
+#### 4. Gestionar Solicitudes
+
+```bash
+# Ver solicitudes pendientes
+GET /api/applications/programmer/{tu_id}?status=PENDING
+Authorization: Bearer {token}
+
+# Aceptar solicitud
+PATCH /api/applications/{applicationId}/status
+Authorization: Bearer {token}
+{
+  "status": "ACCEPTED",
+  "meetingLink": "https://meet.google.com/xxx-yyyy-zzz"
+}
+
+# Rechazar solicitud
+PATCH /api/applications/{applicationId}/status
+Authorization: Bearer {token}
+{
+  "status": "REJECTED",
+  "rejectionReason": "No disponible en esas fechas"
+}
+
+# Marcar como completada
+PATCH /api/applications/{applicationId}/status
+Authorization: Bearer {token}
+{
+  "status": "COMPLETED"
+}
 ```
 
 ---
 
-## 📡 Variables de Entorno
+### Para Clientes (Usuarios Standard)
 
-| Variable | Descripción | Valor por defecto |
-|----------|-------------|-------------------|
-| `PGHOST` | Host de PostgreSQL | localhost |
-| `PGPORT` | Puerto de PostgreSQL | 5432 |
-| `PGDATABASE` | Nombre de la base de datos | proyect_backend |
-| `PGUSER` | Usuario de PostgreSQL | root |
-| `PGPASSWORD` | Contraseña de PostgreSQL | root |
-| `PGSSLMODE` | Modo SSL para PostgreSQL | disable |
-| `JWT_SECRET` | Clave secreta para JWT | (Ver application.yaml) |
+#### 1. Registro
+
+```bash
+POST /api/auth/register
+{
+  "email": "cliente@email.com",
+  "password": "miPassword123",
+  "name": "Juan Cliente"
+}
+```
+
+#### 2. Buscar Programadores
+
+```bash
+# Ver todos los desarrolladores disponibles
+GET /api/profiles/developers
+
+# Ver proyectos de un desarrollador
+GET /api/projects/user/{programmerId}
+
+# Ver disponibilidad del desarrollador
+GET /api/availability/{programmerId}
+```
+
+#### 3. Solicitar Servicio
+
+```bash
+POST /api/applications/client/{tu_clientId}
+Authorization: Bearer {token}
+{
+  "programmerId": 3,
+  "subject": "Desarrollo de App Móvil",
+  "description": "Necesito una app para gestión de inventario",
+  "budget": "$2000-3000",
+  "scheduledDate": 1707580800000,
+  "durationMinutes": 60,
+  "startTime": 1707584400000,
+  "endTime": 1707588000000
+}
+```
+
+#### 4. Seguimiento de Solicitudes
+
+```bash
+# Ver todas mis solicitudes
+GET /api/applications/client/{tu_clientId}
+Authorization: Bearer {token}
+
+# Filtrar por estado
+GET /api/applications/client/{tu_clientId}?status=ACCEPTED
+
+# Cancelar solicitud (solo si está PENDING)
+PATCH /api/applications/{applicationId}/status
+{
+  "status": "CANCELLED"
+}
+```
+
+---
+
+## Instalación y Despliegue
+
+### Desarrollo Local
+
+```bash
+# 1. Clonar repositorio
+git clone <repository-url>
+cd proyect_backend
+
+# 2. Configurar PostgreSQL local
+# Crear base de datos: proyect_backend
+
+# 3. Configurar variables de entorno (opcional)
+# O usar valores por defecto en application.yaml
+
+# 4. Ejecutar
+./gradlew bootRun
+```
+
+### Variables de Entorno
+
+| Variable | Descripción | Default |
+|----------|-------------|---------|
+| `PGHOST` | Host PostgreSQL | localhost |
+| `PGPORT` | Puerto PostgreSQL | 5432 |
+| `PGDATABASE` | Nombre de BD | proyect_backend |
+| `PGUSER` | Usuario BD | root |
+| `PGPASSWORD` | Contraseña BD | root |
+| `PGSSLMODE` | Modo SSL | disable |
+| `JWT_SECRET` | Clave secreta JWT | (ver yaml) |
 | `SMTP_SERVER_HOST` | Host SMTP | localhost |
 | `SMTP_SERVER_PORT` | Puerto SMTP | 587 |
-| `SMTP_SERVER_USERNAME` | Usuario SMTP | (vacío) |
-| `SMTP_SERVER_PASSWORD` | Contraseña SMTP | (vacío) |
-| `SITE_MAIL_RECIEVER` | Email receptor de notificaciones | (vacío) |
+| `SMTP_SERVER_USERNAME` | Usuario SMTP | - |
+| `SMTP_SERVER_PASSWORD` | Contraseña SMTP | - |
 
----
-
-## 🧪 Testing
+### Docker
 
 ```bash
-# Ejecutar todos los tests
-./gradlew test
+# Construir y ejecutar
+docker-compose up --build
 
-# Ejecutar tests de un módulo específico
-./gradlew test --tests "*AuthServiceTest*"
-
-# Generar reporte de cobertura
-./gradlew test jacocoTestReport
+# Ver logs
+docker-compose logs -f app
 ```
+
+### Producción (Render)
+
+El proyecto está configurado para desplegar automáticamente en Render:
+- URL: `https://proyect-backend-dgcy.onrender.com`
+- BD: Neon PostgreSQL (SSL requerido)
 
 ---
 
-## 📱 Flujo de Uso Típico
+## Códigos de Error
 
-### 1. **Registro e Inicio de Sesión**
-```
-1. Usuario realiza POST /auth/register (obtiene token)
-2. O usuario realiza POST /auth/login
-3. Token JWT se usa en todos los endpoints posteriores
-```
+| Código | Significado |
+|--------|-------------|
+| `200` | OK - Operación exitosa |
+| `201` | Created - Recurso creado |
+| `204` | No Content - Eliminación exitosa |
+| `400` | Bad Request - Datos inválidos |
+| `401` | Unauthorized - Token inválido/expirado |
+| `403` | Forbidden - Sin permisos |
+| `404` | Not Found - Recurso no encontrado |
+| `409` | Conflict - Email duplicado, etc. |
+| `500` | Internal Server Error |
 
-### 2. **Creación de Perfil**
-```
-1. Usuario autenticado realiza POST /api/profiles/standard o /developer
-2. Completa su perfil con información personal/profesional
-```
-
-### 3. **Gestión de Proyectos**
-```
-1. Programador crea proyectos con POST /api/projects
-2. Asocia tecnologías a los proyectos
-3. Actualiza proyectos según sea necesario
-```
-
-### 4. **Solicitudes de Servicio**
-```
-1. Cliente crea solicitud con POST /api/applications/client/{clientId}
-2. Programador recibe solicitud y la ve en GET /api/applications/programmer/{programmerId}
-3. Programador cambia estado con PATCH /api/applications/{id}/status
-4. Cliente puede monitorear estado de sus solicitudes
-```
-
----
-
-## 🚨 Manejo de Errores
-
-La API devuelve respuestas de error en formato JSON:
-
+### Formato de Error
 ```json
 {
-  "timestamp": "2024-02-10T10:30:00",
+  "timestamp": "2026-02-10T15:30:00",
   "status": 400,
   "error": "Bad Request",
   "message": "El email ya está registrado",
@@ -711,94 +884,13 @@ La API devuelve respuestas de error en formato JSON:
 }
 ```
 
-### Códigos HTTP Utilizados
+---
 
-| Código | Significado |
-|--------|------------|
-| `200 OK` | Solicitud exitosa |
-| `201 Created` | Recurso creado exitosamente |
-| `204 No Content` | Solicitud exitosa sin contenido |
-| `400 Bad Request` | Solicitud inválida o validación fallida |
-| `401 Unauthorized` | Autenticación requerida |
-| `403 Forbidden` | Acceso prohibido |
-| `404 Not Found` | Recurso no encontrado |
-| `409 Conflict` | Conflicto (ej. email duplicado) |
-| `500 Internal Server Error` | Error interno del servidor |
+## Contacto y Soporte
+
+Para reportar problemas o solicitar nuevas funcionalidades, crear un issue en el repositorio.
 
 ---
 
-## 🔧 Desarrollo y Contribución
-
-### Configurar el entorno de desarrollo
-
-```bash
-# Instalar dependencias
-./gradlew clean build -x test
-
-# Ejecutar en modo desarrollo
-./gradlew bootRun
-
-# Generar JAR ejecutable
-./gradlew build
-```
-
-### Estructura de commits
-
-```
-feat: Agregar nueva funcionalidad
-fix: Corregir bug
-docs: Actualizar documentación
-test: Agregar o modificar tests
-refactor: Cambios de refactorización
-```
-
----
-
-## 📝 Notas de Producción
-
-Para desplegar en producción:
-
-1. ✅ Cambiar `JWT_SECRET` a una clave más segura
-2. ✅ Configurar base de datos PostgreSQL en servidor remoto
-3. ✅ Habilitar HTTPS en el servidor
-4. ✅ Configurar SMTP con credenciales reales
-5. ✅ Establecer `spring.jpa.hibernate.ddl-auto: validate`
-6. ✅ Implementar logging centralizado
-7. ✅ Agregar autenticación de dos factores (2FA)
-8. ✅ Configurar rate limiting
-9. ✅ Usar variables de entorno para todas las credenciales
-10. ✅ Implementar CORS apropiadamente
-
----
-
-## 📞 Soporte y Contacto
-
-Para reportar bugs o sugerencias:
-
-1. Revisar la documentación existente
-2. Crear un issue describiendo el problema
-3. Incluir pasos para reproducir
-4. Adjuntar logs o screenshots si es relevante
-
----
-
-## 📄 Licencia
-
-Este proyecto es propiedad de [Tu Institución/Empresa]. Todos los derechos reservados.
-
----
-
-**Última actualización**: 10 de febrero de 2026
-
----
-
-## 🎯 Roadmap Futuro
-
-- [ ] Integración con pasarelas de pago
-- [ ] Sistema de notificaciones en tiempo real (WebSockets)
-- [ ] Panel de administración
-- [ ] Sistema de calificaciones y reseñas
-- [ ] API de reportes avanzados
-- [ ] Internacionalización (i18n)
-- [ ] Testing automatizado mejorado
-- [ ] Documentación con Swagger/OpenAPI
+**Versión**: 0.0.1-SNAPSHOT  
+**Última actualización**: Febrero 2026
