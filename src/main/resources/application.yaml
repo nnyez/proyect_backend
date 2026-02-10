@@ -3,7 +3,7 @@ spring:
     name: proyect_backend
   
   datasource:   
-    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:proyect_backend}?sslmode=${PGSSLMODE:disable}
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:proyect_backend}?sslmode=${PGSSLMODE:disable}&channelBinding=require
     username: ${PGUSER:root}
     password: ${PGPASSWORD:root}
     driver-class-name: org.postgresql.Driver

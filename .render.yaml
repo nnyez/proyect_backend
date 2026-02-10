@@ -1,0 +1,28 @@
+version: 1
+
+services:
+  - type: web
+    name: proyect_backend
+    runtime: docker
+    plan: free
+    region: oregon
+    envVars:
+      - key: PGHOST
+        scope: RUN
+        value: ep-dry-forest-aizhmpyn-pooler.c-4.us-east-1.aws.neon.tech
+      - key: PGPORT
+        scope: RUN
+        value: 5432
+      - key: PGDATABASE
+        scope: RUN
+        value: neondb
+      - key: PGUSER
+        scope: RUN
+        value: neondb_owner
+      - key: PGPASSWORD
+        scope: RUN
+        value: npg_Z5CjcBXnHS4v
+      - key: PGSSLMODE
+        scope: RUN
+        value: require
+    healthCheckPath: /health

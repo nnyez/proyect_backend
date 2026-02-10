@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: proyect_backend
+    ports:
+      - "8080:8080"
+    environment:
+      # PostgreSQL configuration from .env
+      PGHOST: ${PGHOST:-ep-dry-forest-aizhmpyn-pooler.c-4.us-east-1.aws.neon.tech}
+      PGPORT: ${PGPORT:-5432}
+      PGDATABASE: ${PGDATABASE:-neondb}
+      PGUSER: ${PGUSER:-neondb_owner}
+      PGPASSWORD: ${PGPASSWORD:-npg_Z5CjcBXnHS4v}
+      PGSSLMODE: ${PGSSLMODE:-require}
+    restart: unless-stopped
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
