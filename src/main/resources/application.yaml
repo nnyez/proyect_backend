@@ -1,0 +1,66 @@
+spring:
+  application:
+    name: proyect_backend
+  
+  datasource:   
+    url: jdbc:postgresql://${PGHOST:localhost}:${PGPORT:5432}/${PGDATABASE:proyect_backend}?sslmode=${PGSSLMODE:disable}
+    username: ${PGUSER:root}
+    password: ${PGPASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  # Mail Configuration - SMTP para envío de correos
+  mail:
+    host: ${SMTP_SERVER_HOST:localhost}
+    port: ${SMTP_SERVER_PORT:587}
+    username: ${SMTP_SERVER_USERNAME:}
+    password: ${SMTP_SERVER_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+          from: ${SMTP_SERVER_USERNAME:}
+          from-name: ProyectApp
+
+server:
+  port: 8080
+
+# JWT Configuration
+jwt:
+  # Secret key para firmar tokens (EN PRODUCCIÓN USAR VARIABLE DE ENTORNO)
+  secret: ${JWT_SECRET:mySecretKeyForJWTTokenGenerationAndValidationThatNeedsToBeVeryLongAndSecureForProductionUse1234567890!@#$%^&*()_+{}[]|:;<>,.?/}
+  
+  # Tiempo de expiración del access token (24 horas)
+  expiration: 86400000
+  
+  # Tiempo de expiración del refresh token (7 días)
+  refresh-expiration: 604800000
+  
+  # Issuer del token
+  issuer: proyect_backend-api
+  
+  # Header donde se envía el token
+  header: Authorization
+  
+  # Prefijo del token (incluye espacio después de Bearer)
+  prefix: "Bearer "
+
+# Mail Service Custom Properties
+mail:
+  service:
+    receiver-email: ${SITE_MAIL_RECIEVER:} 
